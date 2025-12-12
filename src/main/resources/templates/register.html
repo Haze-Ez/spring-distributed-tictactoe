@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Register - Tic Tac Toe</title>
+</head>
+<body style="font-family:sans-serif;text-align:center;background:radial-gradient(circle, lightcyan, skyblue, deepskyblue);">
+<h2>Register</h2>
+
+<form th:action="@{/register}" th:object="${user}" method="post">
+    <div>
+        <label>Username:</label>
+        <input type="text" th:field="*{username}" required>
+    </div>
+    <div>
+        <label>Password:</label>
+        <input type="password" th:field="*{password}" required>
+    </div>
+    <div style="margin-top:10px;">
+        <button type="submit">Register</button>
+    </div>
+
+    <p th:if="${error}" style="color:red;" th:text="${error}"></p>
+</form>
+
+<p>Already have an account? <a th:href="@{/login}">Login here</a></p>
+</body>
+</html>

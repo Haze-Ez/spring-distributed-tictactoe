@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Login - Tic Tac Toe</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: radial-gradient(circle, lightcyan, skyblue, deepskyblue);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 300px;
+        }
+        input {
+            width: 90%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: deepskyblue;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: dodgerblue;
+        }
+        a {
+            color: deepskyblue;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+<div class="login-box">
+    <h2>Tic Tac Toe Login</h2>
+
+    <form th:action="@{/login}" method="post">
+        <input type="text" name="username" placeholder="Username" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <button type="submit">Login</button>
+    </form>
+
+    <p style="margin-top:10px;">
+        <a th:href="@{/register}">Create new account</a>
+    </p>
+
+    <p th:if="${param.error}" style="color:red;">Invalid username or password</p>
+    <p th:if="${param.logout}" style="color:green;">You have been logged out successfully</p>
+    <p th:if="${param.registered}" style="color:green;">Registration successful! You can log in now</p>
+</div>
+</body>
+</html>

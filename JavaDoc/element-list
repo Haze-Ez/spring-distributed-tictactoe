@@ -1,0 +1,5 @@
+org.example.tictactoe
+org.example.tictactoe.controller
+org.example.tictactoe.model
+org.example.tictactoe.repository
+org.example.tictactoe.service

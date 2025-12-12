@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>My Games</title>
+</head>
+<body style="font-family:sans-serif;background:radial-gradient(circle, lightcyan, skyblue, deepskyblue);">
+
+<div style="text-align:right;margin:10px;">
+    <a th:href="@{/game/mode}">New Game</a> |
+    <a th:href="@{/login}">Logout</a>
+</div>
+
+<h2 style="text-align:center;">My Games</h2>
+
+<table border="1" style="margin:auto;border-collapse:collapse;background:white;">
+    <tr style="background:#add8e6;">
+        <th>ID</th>
+        <th>Status</th>
+        <th>As</th>
+        <th>Created</th>
+        <th>Action</th>
+    </tr>
+    <tr th:each="g : ${games}">
+        <td th:text="${g.id}"></td>
+        <td th:text="${g.status}"></td>
+        <td>
+            <span th:if="${g.playerX != null}" th:text="'X: ' + ${g.playerX.username}"></span>
+            <span th:if="${g.playerO != null}" th:text="' | O: ' + ${g.playerO.username}"></span>
+        </td>
+        <td th:text="${g.createdAt}"></td>
+        <td>
+            <a th:href="@{/game/{id}(id=${g.id})}">Open</a>
+        </td>
+    </tr>
+</table>
+
+<h2 style="text-align:center;margin-top:30px;">Open Games to Join</h2>
+
+<table border="1" style="margin:auto;border-collapse:collapse;background:white;">
+    <tr style="background:#add8e6;">
+        <th>ID</th>
+        <th>Host</th>
+        <th>Created</th>
+        <th>Action</th>
+    </tr>
+    <tr th:each="g : ${openGames}">
+        <td th:text="${g.id}"></td>
+        <td th:text="${g.playerX != null ? g.playerX.username : 'Unknown'}"></td>
+        <td th:text="${g.createdAt}"></td>
+        <td>
+            <form th:action="@{/game/join/{id}(id=${g.id})}" method="post">
+                <button type="submit">Join as O</button>
+            </form>
+        </td>
+    </tr>
+</table>
+
+<!-- Leaderboard -->
+<div style="text-align:center; margin-top: 20px;">
+    <h3>🏆 Leaderboard</h3>
+    <table border="1" style="margin:auto;border-collapse:collapse;background:white;">
+        <tr style="background:#add8e6;">
+            <th>Player</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Ties</th>
+            <th>Games</th>
+        </tr>
+        <tbody id="leaderboardBody">
+        <script>
+            function loadLeaderboard() {
+                fetch('/game/leaderboard-data')
+                    .then(res => {
+                        if (!res.ok) throw new Error('Failed to load leaderboard');
+                        return res.json();
+                    })
+                    .then(data => {
+                        const tbody = document.getElementById('leaderboardBody');
+                        tbody.innerHTML = '';
+
+                        data.forEach(p => {
+                            const tr = document.createElement('tr');
+
+                            tr.innerHTML = `
+                        <td>${p.username}</td>
+                        <td>${p.wins}</td>
+                        <td>${p.losses}</td>
+                        <td>${p.ties}</td>
+                        <td>${p.gamesPlayed}</td>
+                    `;
+
+                            tbody.appendChild(tr);
+                        });
+                    })
+                    .catch(err => console.log(err));
+            }
+
+            // initial load
+            loadLeaderboard();
+            // refresh every 2 seconds
+            setInterval(loadLeaderboard, 2000);
+        </script>
+
+
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

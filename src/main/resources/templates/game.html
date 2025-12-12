@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Tic Tac Toe Game</title>
+    <style>
+        td {
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            border: 2px solid black;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body style="background: radial-gradient(circle,lightcyan,skyblue,deepskyblue); font-family:sans-serif;">
+
+<!-- Top bar -->
+<div style="text-align:right;margin:10px;">
+    <a th:href="@{/game}">My Games</a> |
+    <a th:href="@{/logout}">Logout</a>
+</div>
+
+<h2 style="text-align:center;">Game #[[${gameId}]]</h2>
+
+<!-- PvP waiting/join block -->
+<div style="text-align:center;" th:if="${game != null and game.status == 'WAITING'}">
+    <p>Waiting for an opponent...</p>
+    <form th:action="@{/game/join/{id}(id=${gameId})}" method="post"
+          th:if="${currentUser != null and game.playerO == null and
+                   game.playerX != null and
+                   game.playerX.username != currentUser}">
+        <button type="submit">Join as O</button>
+    </form>
+</div>
+
+<!-- Board -->
+<table id="board" border="2" height="50%" width="25%" align="center">
+    <tr>
+        <td id="cell0"></td><td id="cell1"></td><td id="cell2"></td>
+    </tr>
+    <tr>
+        <td id="cell3"></td><td id="cell4"></td><td id="cell5"></td>
+    </tr>
+    <tr>
+        <td id="cell6"></td><td id="cell7"></td><td id="cell8"></td>
+    </tr>
+</table>
+
+<!-- Controls -->
+<div style="text-align: center; margin-top: 10px;">
+    <!-- optional: new game directly from here -->
+    <form th:action="@{/game/new}" method="post" style="display:inline;margin-right:10px;">
+        <button type="submit" style="width:100px;" id="newGameButton">New Game</button>
+    </form>
+
+    <input type="button" value="Undo" style="width: 100px" id="undoButton">
+    <br><br>
+    <a th:href="@{/game/puzzle}"><button type="button">Puzzles</button></a>
+    <a th:href="@{/game/Awaiting}"><button type="button">....</button></a>
+</div>
+
+<div id="gameStatus" style="text-align:center;margin-top:10px;font-weight:bold;"></div>
+<div id="timer" style="text-align:center;margin-top:5px;"></div>
+
+<!-- Leaderboard -->
+<div style="text-align:center; margin-top: 20px;">
+    <h3>🏆 Leaderboard</h3>
+    <table border="1" style="margin:auto;border-collapse:collapse;background:white;">
+        <tr style="background:#add8e6;">
+            <th>Player</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Ties</th>
+            <th>Games</th>
+        </tr>
+        <tr th:each="p : ${players}">
+            <td th:text="${p.username}"></td>
+            <td th:text="${p.wins}"></td>
+            <td th:text="${p.losses}"></td>
+            <td th:text="${p.ties}"></td>
+            <td th:text="${p.gamesPlayed}"></td>
+        </tr>
+    </table>
+</div>
+
+<!-- JS -->
+<script th:inline="javascript">
+    const gameId = [[${gameId}]];
+</script>
+<script>
+    const cells = document.querySelectorAll('#board td');
+    let gameOverShown = false;
+
+    // simple timer
+    let secs = 0;
+    setInterval(() => {
+        secs++;
+        document.getElementById('timer').textContent = "Game time: " + secs + "s";
+    }, 1000);
+
+    // click -> move
+    cells.forEach((cell, i) => {
+        cell.addEventListener('click', () => {
+            fetch(`/game/move/${gameId}/${i}`, { method: 'POST' })
+                .then(res => {
+                    if (!res.ok) { throw new Error("Move failed"); }
+                    return res.json();
+                })
+                .then(updateFromState)
+                .catch(err => console.log(err));
+        });
+    });
+
+    // undo
+    document.getElementById("undoButton").addEventListener("click", () => {
+        if(gameOverShown) return; // No undo after game over
+
+        fetch(`/game/undo/${gameId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(updateFromState)
+            .catch(err => console.log(err));
+
+    });
+
+    // common UI updater for moves, undo and polling
+    function updateFromState(data) {
+        // board
+        data.board.forEach((val, idx) => {
+            document.getElementById('cell' + idx).textContent =
+                val === '-' ? '' : val;
+        });
+
+        if (data.winner && !gameOverShown) {
+            gameOverShown = true;
+            showGameOver(data.winner);
+        } else if (!data.winner) {
+            document.getElementById('gameStatus').textContent =
+                data.currentPlayer + "'s turn";
+        }
+    }
+
+    // polling, runs for BOTH players
+    function pollState() {
+        if (gameOverShown) return;
+
+        fetch(`/game/state/${gameId}`)
+            .then(res => res.json())
+            .then(updateFromState)
+            .catch(err => console.log(err));
+    }
+
+    // initial load + interval
+    pollState();
+    setInterval(pollState, 1000); // 1s is perfectly fine
+
+    function showGameOver(winner) {
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.background = 'rgba(0,0,0,0.8)';
+        overlay.style.color = 'white';
+        overlay.style.fontSize = '3rem';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.zIndex = '1000';
+
+        let message;
+        if (winner === 'Draw') {
+            message = "Game Over — It's a draw!";
+        } else {
+            message = `Game Over — ${winner} wins!`;
+        }
+
+        overlay.textContent = message;
+        document.body.appendChild(overlay);
+
+        setTimeout(() => {
+            window.location.href = "/game";
+        }, 2000);
+    }
+</script>
+
+</body>
+</html>
