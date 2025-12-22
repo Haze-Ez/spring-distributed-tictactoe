@@ -17,12 +17,16 @@
 
 <!-- Top bar -->
 <div style="text-align:right;margin:10px;">
-    <a th:href="@{/game}">My Games</a> |
-    <a th:href="@{/logout}">Logout</a>
+    <form th:action="@{/game}" method="get" style="display:inline;">
+        <button type="submit" style="background:none;border:none;color:blue;cursor:pointer;text-decoration:underline;">My Games</button>
+    </form>
+    |
+    <form th:action="@{/logout}" method="post" style="display:inline;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button type="submit" style="background:none;border:none;color:blue;cursor:pointer;text-decoration:underline;">Logout</button>
+    </form>
 </div>
-
 <h2 style="text-align:center;">Game #[[${gameId}]]</h2>
-
 <!-- PvP waiting/join block -->
 <div style="text-align:center;" th:if="${game != null and game.status == 'WAITING'}">
     <p>Waiting for an opponent...</p>
@@ -94,9 +98,15 @@
 
     // simple timer
     let secs = 0;
+    let mins = 0;
+
     setInterval(() => {
         secs++;
-        document.getElementById('timer').textContent = "Game time: " + secs + "s";
+            if(secs % 60 == 0) {
+                mins++;
+                secs = 0;
+            }
+        document.getElementById('timer').textContent = "Game time: "+ mins + 'm ' + secs + "s";
     }, 1000);
 
     // click -> move

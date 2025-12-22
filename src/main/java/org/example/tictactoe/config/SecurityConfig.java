@@ -32,7 +32,12 @@ public class SecurityConfig {
                         .permitAll()
                 )
 
-                .logout(withDefaults())
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout")
+                        .permitAll()
+                )
+
 
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/game/**", "/login", "/register")
