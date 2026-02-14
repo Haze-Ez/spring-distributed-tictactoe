@@ -11,7 +11,6 @@ import java.util.List;
 public class Game {
     private static final int BOARD_SIZE = 9;
     private static final String EMPTY_CELL = "-";
-    // let's use lowercase since your code uses "x"/"o"
     private static final String PLAYER_X = "x";
     private static final String PLAYER_O = "o";
     private static final String DRAW = "Draw";
