@@ -6,7 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -51,11 +51,12 @@ class TictactoeApplicationTests {
 
     @Test
     @WithMockUser(username = "testUser")
+    @SuppressWarnings("null")
     void shouldEndUserSession() throws Exception {
         // Verify the logout redirects with 320 Found status
         this.mockMvc.perform(post("/logout")
-                        .with(csrf()))
-                        .andExpect(status().is3xxRedirection());
+                .with((RequestPostProcessor) csrf()))
+                .andExpect(status().is3xxRedirection());
     }
 
 }
