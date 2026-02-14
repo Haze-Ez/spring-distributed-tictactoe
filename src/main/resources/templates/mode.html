@@ -1,21 +1,31 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <title>Select Mode</title>
 </head>
-<body style="font-family:sans-serif;text-align:center;background:radial-gradient(circle, lightcyan, skyblue, deepskyblue);">
-<h2>Select Game Mode</h2>
 
-<form th:action="@{/game/new}" method="post" style="margin:10px;">
-    <input type="hidden" name="cpu" value="false">
-    <button type="submit">Player vs Player</button>
-</form>
+<body
+    style="font-family:sans-serif;text-align:center;background:radial-gradient(circle, lightcyan, skyblue, deepskyblue);">
+    <h2>Select Game Mode</h2>
 
-<form th:action="@{/game/new}" method="post" style="margin:10px;">
-    <input type="hidden" name="cpu" value="true">
-    <button type="submit">Player vs CPU</button>
-</form>
+    <form th:action="@{/game/new}" method="post" style="margin:10px;">
+        <input type="hidden" name="cpu" value="false">
+        <button type="submit">Player vs Player</button>
+    </form>
 
-<p><a th:href="@{/game}">My Games</a></p>
+    <form th:action="@{/game/new}" method="post" style="margin:10px;">
+        <input type="hidden" name="cpu" value="true">
+        <label for="difficulty">Data Access Level:</label>
+        <select name="difficulty" id="difficulty">
+            <option value="EASY">EASY</option>
+            <option value="HARDER" selected>HARDER</option>
+            <option value="IMPOSSIBLE">IMPOSSIBLE</option>
+        </select>
+        <button type="submit">Player vs CPU</button>
+    </form>
+
+    <p><a th:href="@{/game}">My Games</a></p>
 </body>
+
 </html>

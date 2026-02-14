@@ -22,30 +22,32 @@ public class GameService {
         this.userRepository = userRepository;
     }
 
-
-    // 1️⃣ List all games a user is involved in
     public List<Game> findGamesForUser(String username) {
         return gameRepository.findByPlayerX_UsernameOrPlayerO_Username(username, username);
     }
 
-    // 2️⃣ Create new game where current user is X
-    public Game createNewGameForUser(String username, boolean vsCpu) {
+    public Game createNewGameForUser(String username, boolean vsCpu, String difficulty) {
         AppUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
         Game game = new Game();
         game.initialize();
 
-        game.setPlayerX(user);  // creator always plays as X
+        game.setPlayerX(user);
         game.setVsCpu(vsCpu);
         game.setCreatedAt(LocalDateTime.now());
 
-        if (vsCpu) {
-            // human vs CPU: game can start immediately
-            game.setStatus("IN_PROGRESS");
-            game.setPlayerO(null); // CPU is logical O
+        // Validation for difficulty
+        if (difficulty != null && !difficulty.isEmpty()) {
+            game.setDifficulty(difficulty.toUpperCase());
         } else {
-            // PvP: wait for another human player to join as O
+            game.setDifficulty("HARDER"); // Default
+        }
+
+        if (vsCpu) {
+            game.setStatus("IN_PROGRESS");
+            game.setPlayerO(null);
+        } else {
             game.setStatus("WAITING");
             game.setPlayerO(null);
         }
@@ -53,39 +55,56 @@ public class GameService {
         return gameRepository.save(game);
     }
 
-
-    // 3️⃣ Fetch a game safely
     public Game getGame(Long id) {
+        if (id == null) {
+            throw new IllegalArgumentException("Game ID cannot be null");
+        }
         return gameRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Game not found"));
     }
 
-    // 4️⃣ Make a move (user-aware)
     public Game makeMove(Long gameId, int position, String username) {
         Game game = getGame(gameId);
 
-        // check permission
         if (!isPlayerAllowedToMove(game, username)) {
             throw new RuntimeException("You are not allowed to move in this game.");
         }
 
-        boolean moved = game.makeMove(position); // human move
+        boolean moved = game.makeMove(position);
         if (!moved) {
             return game;
         }
 
-        // if vs CPU and now it's CPU's turn and game not finished
         if (game.isVsCpu()
                 && "o".equalsIgnoreCase(game.getCurrentPlayer())
                 && game.getWinner() == null) {
 
-            int cpuPos = findFirstEmpty(game.getBoard());
+            int maxDepth;
+            int cpuPos = -1;
+            String difficulty = game.getDifficulty();
+
+            if ("EASY".equalsIgnoreCase(difficulty)) {
+                // EASY: Just pick the first open spot
+                int firstEmpty = findFirstEmpty(game.getBoard());
+                if (firstEmpty != -1) {
+                    game.makeMove(firstEmpty);
+                    // We already moved
+                    cpuPos = -1;
+                }
+            } else {
+                if ("HARDER".equalsIgnoreCase(difficulty)) {
+                    maxDepth = 2;
+                } else {
+                    maxDepth = -1; // IMPOSSIBLE
+                }
+                cpuPos = findBestMove(game.getBoard(), maxDepth);
+            }
+
             if (cpuPos >= 0) {
                 game.makeMove(cpuPos);
             }
         }
 
-        // status + stats
         if (game.getWinner() != null && !game.getWinner().isEmpty()) {
             game.setStatus("FINISHED");
 
@@ -107,17 +126,12 @@ public class GameService {
         return gameRepository.save(game);
     }
 
-
-    // 5️⃣ Undo move (Restricted to CPU mode to prevent PvP trolling)
     public Game undoMove(Long gameId, String username) {
         Game game = getGame(gameId);
 
-        // --- SECURITY CHECK ---
-        // Only allow undo if it is a Single Player game
         if (!game.isVsCpu()) {
             throw new RuntimeException("Undo is only allowed in Player vs CPU mode.");
         }
-
 
         if (!belongsToUser(game, username)) {
             throw new RuntimeException("You are not allowed to undo moves in this game.");
@@ -125,9 +139,6 @@ public class GameService {
 
         game.undoMove();
 
-        // If playing against CPU, we usually want to undo TWICE (the CPU's move AND the Player's move)
-        // so the player can retry.
-        // Check if the undo left it as 'o' (CPU) turn. If so, undo one more time to get back to 'x'.
         if (game.isVsCpu() && "o".equalsIgnoreCase(game.getCurrentPlayer())) {
             game.undoMove();
         }
@@ -136,8 +147,7 @@ public class GameService {
         return gameRepository.save(game);
     }
 
-    // ===== Compatibility methods (so old calls don’t break) =====
-
+    // Compatibility methods
     public Game createNewGame() {
         Game game = new Game();
         game.initialize();
@@ -156,17 +166,15 @@ public class GameService {
         return gameRepository.save(game);
     }
 
-    // ===== Helper logic =====
-
+    // Helpers
     private boolean isPlayerAllowedToMove(Game game, String username) {
-        // vs CPU: only X can move, only on X turn
         if (game.isVsCpu()) {
-            if (game.getPlayerX() == null) return false;
+            if (game.getPlayerX() == null)
+                return false;
             return "x".equalsIgnoreCase(game.getCurrentPlayer()) &&
                     game.getPlayerX().getUsername().equals(username);
         }
 
-        // normal PvP: both players must exist
         if (game.getPlayerX() != null && game.getPlayerO() != null) {
             String current = game.getCurrentPlayer();
             if ("x".equalsIgnoreCase(current)) {
@@ -176,7 +184,6 @@ public class GameService {
             }
         }
 
-        // fallback: only X exists yet
         if (game.getPlayerX() != null) {
             return game.getPlayerX().getUsername().equals(username);
         }
@@ -184,31 +191,111 @@ public class GameService {
         return false;
     }
 
-
     private boolean belongsToUser(Game game, String username) {
         return (game.getPlayerX() != null && game.getPlayerX().getUsername().equals(username)) ||
                 (game.getPlayerO() != null && game.getPlayerO().getUsername().equals(username));
     }
 
     private void addWin(AppUser user) {
-        if (user == null) return;
+        if (user == null)
+            return;
         user.setWins(user.getWins() + 1);
         user.setGamesPlayed(user.getGamesPlayed() + 1);
         userRepository.save(user);
     }
 
     private void addLoss(AppUser user) {
-        if (user == null) return;
+        if (user == null)
+            return;
         user.setLosses(user.getLosses() + 1);
         user.setGamesPlayed(user.getGamesPlayed() + 1);
         userRepository.save(user);
     }
 
     private void addTie(AppUser user) {
-        if (user == null) return;
+        if (user == null)
+            return;
         user.setTies(user.getTies() + 1);
         user.setGamesPlayed(user.getGamesPlayed() + 1);
         userRepository.save(user);
+    }
+
+    public int findBestMove(List<String> board, int maxDepth) {
+        int bestVal = -1000;
+        int bestMove = -1;
+
+        for (int i = 0; i < 9; i++) {
+            if (board.get(i).equals("-")) {
+                board.set(i, "o");
+                int moveVal = minimax(board, 0, false, maxDepth);
+                board.set(i, "-");
+
+                if (moveVal > bestVal) {
+                    bestMove = i;
+                    bestVal = moveVal;
+                }
+            }
+        }
+        return bestMove;
+    }
+
+    public int findBestMove(List<String> board) {
+        return findBestMove(board, -1);
+    }
+
+    private int minimax(List<String> board, int depth, boolean isMax, int maxDepth) {
+        int score = evaluate(board);
+
+        if (score == 10)
+            return score - depth;
+        if (score == -10)
+            return score + depth;
+        if (!board.contains("-"))
+            return 0;
+
+        if (maxDepth != -1 && depth >= maxDepth) {
+            return 0;
+        }
+
+        if (isMax) {
+            int best = -1000;
+            for (int i = 0; i < 9; i++) {
+                if (board.get(i).equals("-")) {
+                    board.set(i, "o");
+                    best = Math.max(best, minimax(board, depth + 1, false, maxDepth));
+                    board.set(i, "-");
+                }
+            }
+            return best;
+        } else {
+            int best = 1000;
+            for (int i = 0; i < 9; i++) {
+                if (board.get(i).equals("-")) {
+                    board.set(i, "x");
+                    best = Math.min(best, minimax(board, depth + 1, true, maxDepth));
+                    board.set(i, "-");
+                }
+            }
+            return best;
+        }
+    }
+
+    private int evaluate(List<String> board) {
+        int[][] lines = {
+                { 0, 1, 2 }, { 3, 4, 5 }, { 6, 7, 8 },
+                { 0, 3, 6 }, { 1, 4, 7 }, { 2, 5, 8 },
+                { 0, 4, 8 }, { 2, 4, 6 }
+        };
+        for (int[] line : lines) {
+            if (board.get(line[0]).equals(board.get(line[1])) &&
+                    board.get(line[1]).equals(board.get(line[2]))) {
+                if (board.get(line[0]).equals("o"))
+                    return 10;
+                if (board.get(line[0]).equals("x"))
+                    return -10;
+            }
+        }
+        return 0;
     }
 
     private int findFirstEmpty(List<String> board) {
@@ -241,18 +328,11 @@ public class GameService {
     }
 
     public List<Game> findOpenGames(String username) {
-        // all games that are WAITING
         List<Game> waiting = gameRepository.findByStatus("WAITING");
 
-        //filter out my own games so I don't "join" myself
-        waiting.removeIf(g ->
-                g.getPlayerX() != null &&
-                        g.getPlayerX().getUsername().equals(username)
-        );
+        waiting.removeIf(g -> g.getPlayerX() != null &&
+                g.getPlayerX().getUsername().equals(username));
 
         return waiting;
     }
-
-
-
 }

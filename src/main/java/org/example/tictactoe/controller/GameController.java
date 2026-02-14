@@ -21,7 +21,6 @@ public class GameController {
     @Autowired
     private AppUserRepository userRepo;
 
-
     public GameController(GameService gameService, AppUserRepository userRepo) {
         this.gameService = gameService;
         this.userRepo = userRepo;
@@ -40,11 +39,22 @@ public class GameController {
         return "games";
     }
 
+    // Get for mode redirection
+    @GetMapping("/new")
+    public String newGameGet(@RequestParam(required = false) Boolean cpu,
+            @RequestParam(required = false) String difficulty,
+            Principal principal) {
+        boolean vsCpu = cpu != null && cpu;
+        Game game = gameService.createNewGameForUser(principal.getName(), vsCpu, difficulty);
+        return "redirect:/game/" + game.getId();
+    }
 
     // 2) create new game (I am X)
     @PostMapping("/new")
-    public String newGame(@RequestParam(required = false) Boolean cpu, Principal principal) {
-        Game game = gameService.createNewGameForUser(principal.getName(), cpu != null && cpu);
+    public String newGame(@RequestParam(required = false) Boolean cpu,
+            @RequestParam(required = false) String difficulty,
+            Principal principal) {
+        Game game = gameService.createNewGameForUser(principal.getName(), cpu != null && cpu, difficulty);
         return "redirect:/game/" + game.getId();
     }
 
@@ -66,7 +76,6 @@ public class GameController {
         }
         return "game";
     }
-
 
     // 4) move (old code, just scoped to a game)
     @PostMapping("/move/{gameId}/{cell}")
@@ -107,7 +116,6 @@ public class GameController {
         return map;
     }
 
-
     @GetMapping("/leaderboard")
     public String leaderboard(Model model) {
         model.addAttribute("players", userRepo.findTop10ByOrderByWinsDesc());
@@ -131,26 +139,19 @@ public class GameController {
                 .toList();
     }
 
-
     @GetMapping("/puzzle")
-    public String puzzlePage() { return "puzzle"; }
+    public String puzzlePage() {
+        return "puzzle";
+    }
 
     @GetMapping("/Awaiting")
-    public String toBeDeterminedPage() { return "Awaiting"; }
-
+    public String toBeDeterminedPage() {
+        return "Awaiting";
+    }
 
     @GetMapping("/mode")
     public String modePage() {
         return "mode";
     }
-
-    //Get for mode redirection
-    @GetMapping("/new")
-    public String newGameGet(@RequestParam(required = false) Boolean cpu, Principal principal) {
-        boolean vsCpu = cpu != null && cpu;
-        Game game = gameService.createNewGameForUser(principal.getName(), vsCpu);
-        return "redirect:/game/" + game.getId();
-    }
-
 
 }
