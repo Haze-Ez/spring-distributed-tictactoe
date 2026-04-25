@@ -28,7 +28,7 @@
 </div>
 <h2 style="text-align:center;">Game #[[${gameId}]]</h2>
 <!-- PvP waiting/join block -->
-<div style="text-align:center;" th:if="${game != null and game.status == 'WAITING'}">
+<div id="waitingBlock" style="text-align:center;" th:if="${game != null and game.status == 'WAITING'}">
     <p>Waiting for an opponent...</p>
     <form th:action="@{/game/join/{id}(id=${gameId})}" method="post"
           th:if="${currentUser != null and game.playerO == null and
@@ -90,24 +90,14 @@
 
 <!-- JS -->
 <script th:inline="javascript">
-    const gameId = [[${gameId}]];
+    const gameId = /*[[${gameId}]]*/ 0;
 </script>
 <script>
     const cells = document.querySelectorAll('#board td');
     let gameOverShown = false;
 
-    // simple timer
-    let secs = 0;
-    let mins = 0;
-
-    setInterval(() => {
-        secs++;
-            if(secs % 60 == 0) {
-                mins++;
-                secs = 0;
-            }
-        document.getElementById('timer').textContent = "Game time: "+ mins + 'm ' + secs + "s";
-    }, 1000);
+    // Server-anchored timer — reset when game actually starts (both players joined)
+    let gameStartTime = null;
 
     // click -> move
     cells.forEach((cell, i) => {
@@ -148,6 +138,14 @@
             document.getElementById('gameStatus').textContent =
                 data.currentPlayer + "'s turn";
         }
+
+        // Hide waiting block if status is no longer WAITING
+        if (data.status !== 'WAITING') {
+            const waitingBlock = document.getElementById('waitingBlock');
+            if (waitingBlock) {
+                waitingBlock.style.display = 'none';
+            }
+        }
     }
 
     // polling, runs for BOTH players
@@ -156,13 +154,29 @@
 
         fetch(`/game/state/${gameId}`)
             .then(res => res.json())
-            .then(updateFromState)
+            .then(data => {
+            // startedAt arrives as epoch-ms (Long) — no timezone parsing issues
+            if (!gameStartTime && data.startedAt) {
+                gameStartTime = data.startedAt; // just a number
+            }
+            updateFromState(data);
+        })
             .catch(err => console.log(err));
     }
 
-    // initial load + interval
+    function updateTimer() {
+        if (!gameStartTime) return;
+        const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        document.getElementById('timer').textContent =
+            `Game time: ${mins}m ${secs}s`;
+    }
+
+    // initial load + intervals
     pollState();
-    setInterval(pollState, 1000); // 1s is perfectly fine
+    setInterval(pollState, 1000);   // sync state every 1s  
+    setInterval(updateTimer, 1000); // tick the timer every 1s
 
     function showGameOver(winner) {
         const overlay = document.createElement('div');
