@@ -33,8 +33,7 @@ public class SecurityConfig {
                         .permitAll())
 
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/game/**", "/login", "/register"))
-                .headers(h -> h.frameOptions(f -> f.disable())); // for H2
+                        .ignoringRequestMatchers("/game/**", "/login", "/register"));
 
         return http.build();
     }
@@ -45,10 +44,13 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // seeder just in case
+    // Seeder + BCrypt migration:
+    // Re-encodes ANY user whose password is not already a BCrypt hash.
+    // This fixes accounts created before BCrypt was introduced.
     @Bean
     CommandLineRunner initUsers(AppUserRepository repo, PasswordEncoder encoder) {
         return args -> {
+            // Ensure default user exists
             if (repo.findByUsername("haze").isEmpty()) {
                 AppUser u = new AppUser();
                 u.setUsername("haze");
@@ -56,6 +58,15 @@ public class SecurityConfig {
                 u.setRole("ROLE_USER");
                 repo.save(u);
             }
+
+            // Migrate all users with plain-text passwords
+            repo.findAll().forEach(u -> {
+                if (!u.getPassword().startsWith("$2a$")) {
+                    u.setPassword(encoder.encode(u.getPassword()));
+                    repo.save(u);
+                    System.out.println("[Migration] Re-encoded password for user: " + u.getUsername());
+                }
+            });
         };
     }
 }
