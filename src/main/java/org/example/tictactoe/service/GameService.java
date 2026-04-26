@@ -7,6 +7,7 @@ import org.example.tictactoe.repository.GameRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -47,6 +48,7 @@ public class GameService {
         if (vsCpu) {
             game.setStatus("IN_PROGRESS");
             game.setPlayerO(null);
+            game.setStartedAt(Instant.now()); // Solo game: starts immediately
         } else {
             game.setStatus("WAITING");
             game.setPlayerO(null);
@@ -227,7 +229,7 @@ public class GameService {
         for (int i = 0; i < 9; i++) {
             if (board.get(i).equals("-")) {
                 board.set(i, "o");
-                int moveVal = minimax(board, 0, false, maxDepth);
+                int moveVal = minimax(board, 0, false, maxDepth, -10000, 10000);
                 board.set(i, "-");
 
                 if (moveVal > bestVal) {
@@ -243,7 +245,7 @@ public class GameService {
         return findBestMove(board, -1);
     }
 
-    private int minimax(List<String> board, int depth, boolean isMax, int maxDepth) {
+    private int minimax(List<String> board, int depth, boolean isMax, int maxDepth, int alpha, int beta) {
         int score = evaluate(board);
 
         if (score == 10)
@@ -262,8 +264,11 @@ public class GameService {
             for (int i = 0; i < 9; i++) {
                 if (board.get(i).equals("-")) {
                     board.set(i, "o");
-                    best = Math.max(best, minimax(board, depth + 1, false, maxDepth));
+                    best = Math.max(best, minimax(board, depth + 1, false, maxDepth, alpha, beta));
                     board.set(i, "-");
+                    alpha = Math.max(alpha, best);
+                    if (beta <= alpha)
+                        break;
                 }
             }
             return best;
@@ -272,8 +277,11 @@ public class GameService {
             for (int i = 0; i < 9; i++) {
                 if (board.get(i).equals("-")) {
                     board.set(i, "x");
-                    best = Math.min(best, minimax(board, depth + 1, true, maxDepth));
+                    best = Math.min(best, minimax(board, depth + 1, true, maxDepth, alpha, beta));
                     board.set(i, "-");
+                    beta = Math.min(beta, best);
+                    if (beta <= alpha)
+                        break;
                 }
             }
             return best;
@@ -324,6 +332,7 @@ public class GameService {
 
         game.setPlayerO(user);
         game.setStatus("IN_PROGRESS");
+        game.setStartedAt(Instant.now()); // PvP: timer starts when O joins
         gameRepository.save(game);
     }
 
