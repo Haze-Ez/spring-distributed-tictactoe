@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.tictactoe.AppUser;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,8 @@ public class Game {
     private AppUser playerO;
     private String status; // NEW, IN_PROGRESS, FINISHED
     private LocalDateTime createdAt;
+    /** Set the moment both players are present — used as the synchronized timer anchor. */
+    private Instant startedAt;
 
     @ElementCollection(fetch = FetchType.EAGER)
     private List<Integer> moveHistory = new ArrayList<>();

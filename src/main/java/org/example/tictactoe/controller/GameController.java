@@ -113,6 +113,9 @@ public class GameController {
         map.put("currentPlayer", game.getCurrentPlayer());
         map.put("winner", game.getWinner());
         map.put("status", game.getStatus());
+        map.put("createdAt", game.getCreatedAt());
+        // startedAt as epoch-ms: unambiguous across all client timezones
+        map.put("startedAt", game.getStartedAt() != null ? game.getStartedAt().toEpochMilli() : null);
         return map;
     }
 
