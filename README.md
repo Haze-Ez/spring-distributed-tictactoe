@@ -1,118 +1,182 @@
-\# Spring Distributed Tic-Tac-Toe System
+# Spring Distributed Tic-Tac-Toe System
 
+> 🇭🇺 A magyar nyelvű leírásért lásd: [README_HU.md](README_HU.md)
 
+---
 
-\## Overview
+## Overview
 
-A secure, real-time multiplayer application architecture built using \*\*Spring Boot\*\*, \*\*Thymeleaf\*\*, and \*\*PostgreSQL\*\*. This project implements a distributed MVC pattern to handle game state synchronization, user session management, and persistent data storage for multiple concurrent users.
+A secure, real-time multiplayer application built with **Spring Boot**, **Thymeleaf**, and **PostgreSQL**. The project implements a distributed MVC pattern to handle game state synchronization, user session management, and persistent data storage across multiple concurrent users.
 
+---
 
+## Key Features
 
-\## Key Features
+- **Distributed Architecture:** Supports multiple concurrent game sessions via stateless RESTful communication.
+- **Security:** Implements Spring Security for form-based authentication and role-based access control.
+- **Persistence:** Uses JPA/Hibernate with PostgreSQL for relational data integrity (User Profiles, Game History).
+- **Game Modes:** Supports PvP (Local Network) and Single Player (vs CPU).
 
-\* \*\*Distributed Architecture:\*\* Supports multiple concurrent game sessions via stateless RESTful communication.
+---
 
-\* \*\*Security:\*\* Implements Spring Security for authentication and role-based access control.
+## Technology Stack
 
-\* \*\*Persistence:\*\* Uses JPA/Hibernate with PostgreSQL for relational data integrity (User Profiles, Game History).
+| Layer        | Technology                                      |
+|--------------|-------------------------------------------------|
+| **Backend**  | Java 17, Spring Boot 3.5.5 (Web, Security, JPA) |
+| **Frontend** | Thymeleaf, JavaScript (Fetch API), CSS          |
+| **Database** | PostgreSQL                                      |
+| **Build**    | Maven (with Maven Wrapper `mvnw`)               |
 
-\* \*\*Game Modes:\*\* Supports PvP (Local Network) and Single Player (vs CPU).
+---
 
+## Prerequisites
 
+Before running the application, ensure you have the following installed:
 
-\## Technology Stack
+- **Java 17+** — [Download](https://adoptium.net/)
+- **Maven 3.8+** (or use the included `mvnw` wrapper — no installation needed)
+- **PostgreSQL 14+** — [Download](https://www.postgresql.org/download/)
 
-\* \*\*Backend:\*\* Java 17, Spring Boot 3 (Web, Security, Data JPA)
+---
 
-\* \*\*Frontend:\*\* Thymeleaf, JavaScript (Fetch API), CSS
+## Getting Started
 
-\* \*\*Database:\*\* PostgreSQL
+### 1. Set Up the Database
 
-\* \*\*Build Tool:\*\* Maven
+Open your PostgreSQL client (`psql`) and run the following commands to create the database and user:
 
+```sql
+CREATE DATABASE tttdb;
+CREATE USER tttuser WITH PASSWORD 'tttpass';
+GRANT ALL PRIVILEGES ON DATABASE tttdb TO tttuser;
+```
 
+> **Note:** The application uses `spring.jpa.hibernate.ddl-auto=update`, so Hibernate will automatically create all required tables on first startup. No SQL schema script is needed.
 
-\## Documentation
+### 2. Configure Application Properties
 
-Full system documentation, including the thesis and architectural UML diagrams, can be found in the `documentation/` directory.
+The default credentials in `src/main/resources/application.properties` are:
 
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/tttdb
+spring.datasource.username=tttuser
+spring.datasource.password=tttpass
+```
 
+If you use different credentials, update this file before running.
 
-\## Getting Started
+### 3. Run the Application
 
-1\.  Configure `application.properties` with your local PostgreSQL credentials.
+Using the Maven Wrapper (recommended — no Maven installation required):
 
-2\.  Run the application: `mvn spring-boot:run`
+```bash
+# On Windows
+mvnw.cmd spring-boot:run
 
-3\.  Access via `http://localhost:8080`
+# On Linux / macOS
+./mvnw spring-boot:run
+```
 
+Or, if Maven is installed globally:
 
+```bash
+mvn spring-boot:run
+```
 
-\## How to Test Multiplayer (PvP)
+### 4. Access the Application
 
-To verify the real-time multiplayer functionality on a single machine:
+Open your browser and navigate to:
 
+```
+http://localhost:8080
+```
 
+You will be redirected to the login page. Register a new account to get started.
 
-1\.  \*\*Open Browser A (Player X):\*\*
+---
 
-&nbsp;   \* Go to `http://localhost:8080/login`.
+## How to Test Multiplayer (PvP)
 
-&nbsp;   \* Register a user (e.g., `user1`) and log in.
+To verify real-time multiplayer functionality on a single machine, you need **two separate browser sessions**.
 
-&nbsp;   \* Click "New Game" -> "Player vs Player".
+### Step 1 — Open Browser A (Player X)
 
-&nbsp;   \* Copy the Game ID from the URL (or wait in the lobby).
+1. Go to `http://localhost:8080/login`.
+2. Register a user (e.g., `user1`) and log in.
+3. Click **"New Game"** → **"Player vs Player"**.
+4. Wait in the lobby — the Game ID will appear in the URL.
 
+### Step 2 — Open Browser B in *Incognito / Private Mode* (Player O)
 
+> **Important:** You **must** use Incognito mode or a completely different browser to establish a separate session. A second regular tab in the same browser will share the same login session.
 
-2\.  \*\*Open Browser B in \*Incognito/Private Mode\* (Player O):\*\*
+1. Go to `http://localhost:8080/login`.
+2. Register a second user (e.g., `user2`) and log in.
+3. Go to **"My Games"** and find the **"Open Games to Join"** list.
+4. Click **"Join as O"** on the game created by `user1`.
 
-&nbsp;   \* \*Note: You must use Incognito mode or a different browser to create a separate session.\*
+### Step 3 — Verify Synchronization
 
-&nbsp;   \* Go to `http://localhost:8080/login`.
+- Place a move in Browser A.
+- Observe the board update automatically in Browser B (within ~1 second via server polling).
+- Play until a win or draw to see the game-over overlay appear on both screens simultaneously.
 
-&nbsp;   \* Register a second user (e.g., `user2`) and log in.
+---
 
-&nbsp;   \* Go to "My Games" and look for the "Open Games to Join" list.
+## Alternative: Testing with a Mobile Device (LAN)
 
-&nbsp;   \* Click "Join as O" on the game created by `user1`.
+You can use your computer as the server and a phone as the second player, as long as both are on the same WiFi network.
 
+### Step 1 — Find Your Computer's Local IP Address
 
+- **Windows:** Open Command Prompt and run `ipconfig`. Look for the **IPv4 Address** (e.g., `192.168.1.15`).
+- **macOS / Linux:** Open Terminal and run `ifconfig | grep "inet "`.
 
-3\.  \*\*Verify Synchronization:\*\*
+### Step 2 — Connect from Your Phone
 
-&nbsp;   \* Place a move in Browser A.
+On your phone's browser, navigate to:
 
-&nbsp;   \* Observe the board update automatically in Browser B (within 1 second).
+```
+http://<YOUR_COMPUTER_IP>:8080/login
+```
 
-&nbsp;   \* Play until a win/draw to see the game-over overlay on both screens.
+Replace `<YOUR_COMPUTER_IP>` with the IP found above (e.g., `http://192.168.1.15:8080/login`).
 
+### Step 3 — Play
 
+- **Computer:** Log in as `user1` and create a game.
+- **Phone:** Log in as `user2` and join the game from "My Games".
 
-\### Alternative: Testing with a Mobile Device (LAN)
+> **Firewall Note:** If the phone cannot connect, ensure your computer's firewall allows **inbound TCP connections on port 8080**.
 
-You can also test the multiplayer feature by using your computer as the host and a mobile phone as the second player.
+---
 
+## Project Structure
 
+```
+spring-distributed-tictactoe/
+├── src/
+│   ├── main/
+│   │   ├── java/          # Spring Boot application source code
+│   │   └── resources/
+│   │       ├── application.properties
+│   │       └── templates/ # Thymeleaf HTML templates
+│   └── test/              # Unit and integration tests
+├── documentation/         # Thesis, UML diagrams, and use-case documents
+├── JavaDoc/               # Generated API documentation
+├── pom.xml
+└── README.md
+```
 
-1\.  \*\*Connect to the same Network:\*\* Ensure both your computer and phone are connected to the same WiFi.
+---
 
-2\.  \*\*Find your Computer's Local IP:\*\*
+## Documentation
 
-&nbsp;   \* \*\*Windows:\*\* Open Command Prompt and type `ipconfig`. Look for "IPv4 Address" (e.g., `192.168.1.15`).
+Full system documentation — including the thesis and architectural UML diagrams — can be found in the [`documentation/`](documentation/) directory.
 
-&nbsp;   \* \*\*Mac/Linux:\*\* Open Terminal and type `ifconfig | grep "inet "`.
+---
 
-3\.  \*\*Open Browser on Phone:\*\*
+## License
 
-&nbsp;   \* Navigate to `http://YOUR\_COMPUTER\_IP:8080/login` (replace `YOUR\_COMPUTER\_IP` with the numbers found above).
-
-4\.  \*\*Play:\*\*
-
-&nbsp;   \* \*\*Computer:\*\* Log in as `user1` and create a game.
-
-&nbsp;   \* \*\*Phone:\*\* Log in as `user2` and join the game.
-
-&nbsp;   \* \*Note: If the phone cannot connect, ensure your computer's Firewall allows connections on port 8080.\*
-
+This project was developed as an academic thesis project. All rights reserved.
